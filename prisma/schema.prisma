@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  name        String
+  category    String    // coffee | tea | sweets
+  description String?
+  price       Float
+  image       String?
+  stockQty    Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Client {
+  id           Int       @id @default(autoincrement())
+  companyName  String
+  contactName  String?
+  email        String?   @unique
+  phone        String?
+  businessType String?   // coffee_shop | restaurant | hotel | office | store | other
+  address      String?
+  orders       Order[]
+  createdAt    DateTime  @default(now())
+}
+
+model Order {
+  id         Int      @id @default(autoincrement())
+  clientId   Int
+  client     Client   @relation(fields: [clientId], references: [id])
+  items      Json     // [{ productId, qty, price }]
+  status     String   @default("pending") // pending | processing | delivered | cancelled
+  total      Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  clientId  Int
+  client    Client   @relation(fields: [clientId], references: [id])
+  content   String
+  rating    Int
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

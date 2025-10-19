@@ -1,0 +1,40 @@
+{
+  "name": "sunleaf-landing",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/kill-port.js && next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:setup": "node scripts/setup-db.js",
+    "db:test": "node scripts/test-db.js",
+    "vercel-build": "npm run build"
+  },
+  "dependencies": {
+    "next": "14.0.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.4",
+    "axios": "^1.5.0",
+    "sharp": "^0.32.6",
+    "csv-parse": "^5.5.0"
+  },
+  "devDependencies": {
+    "eslint": "8.51.0",
+    "eslint-config-next": "14.0.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^6.4.14",
+    "@types/react": "^18.2.33",
+    "@types/react-dom": "^18.2.14"
+  }
+}

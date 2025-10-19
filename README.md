@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🍃 Sunleaf - Оптові поставки преміум кави та чаю
 
 ![Sunleaf Banner](https://via.placeholder.com/1200x300/0057B7/FFD700?text=Sunleaf+Ukraine)
@@ -176,3 +177,7 @@ MIT License - використовуйте вільно для комерцій�
 **Made with ❤️ for Ukrainian business by [kum1ho](https://github.com/kum1ho)**
 
 ⭐ **Поставте зірочку, якщо проект був корисний!**
+=======
+# sunleaf-project
+My website
+>>>>>>> 804d8d4637cb014265a36c69f51a09c2cd28329e

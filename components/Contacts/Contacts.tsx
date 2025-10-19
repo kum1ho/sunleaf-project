@@ -41,70 +41,93 @@ export default function Contacts() {
 	};
 
 	return (
-		<section id="contacts" style={{ padding: 'clamp(60px, 10vw, 100px) clamp(20px, 4vw, 40px)', background: 'linear-gradient(135deg, #f8f9fa 0%, #e8f5e9 100%)' }}>
-			<div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gap: 40, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))' }}>
-				<div className="fade-in">
-					<h2 style={{ color: '#0057B7', marginBottom: 24, fontSize: 32, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10 }}>
-						<span>📞</span> Зв'яжіться з нами
-					</h2>
-					<div
-						style={{
-							background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
-							padding: 32,
-							borderRadius: 16,
-							boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-							border: '1px solid rgba(0,87,183,0.1)',
-						}}
-					>
-						<p style={{ marginBottom: 20, lineHeight: 1.8 }}>
-							<strong style={{ color: '#0057B7' }}>📍 Адреса:</strong> м. Житомир, вул. Київська, 75
-						</p>
-						<p style={{ marginBottom: 20, lineHeight: 1.8 }}>
-							<strong style={{ color: '#0057B7' }}>📞 Телефони:</strong> +380 (67) 123-45-67, +380 (63) 765-43-21
-						</p>
-						<p style={{ marginBottom: 20, lineHeight: 1.8 }}>
-							<strong style={{ color: '#0057B7' }}>📧 Email:</strong> info@sunleaf.ua
-						</p>
-						<p style={{ marginBottom: 0, lineHeight: 1.8 }}>
-							<strong style={{ color: '#0057B7' }}>🕒 Графік:</strong> Пн-Пт 9:00-18:00, Сб 10:00-15:00
-						</p>
+		<section id="contacts" style={{
+			padding: 'clamp(60px, 10vw, 120px) 20px',
+			background: 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)'
+		}}>
+			<div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+				<div style={{ textAlign: 'center', marginBottom: 'clamp(40px, 8vw, 60px)' }}>
+					<div style={{
+						display: 'inline-block',
+						padding: '10px 20px',
+						background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+						borderRadius: '50px',
+						color: 'white',
+						fontWeight: '700',
+						fontSize: 'clamp(12px, 2vw, 14px)',
+						marginBottom: '24px',
+						boxShadow: '0 8px 24px rgba(102,126,234,0.3)',
+						letterSpacing: '1px'
+					}}>
+						📍 КОНТАКТИ
 					</div>
+
+					<h2 style={{
+						fontSize: 'clamp(32px, 7vw, 56px)',
+						fontWeight: '900',
+						margin: '0 0 20px 0',
+						background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%)',
+						WebkitBackgroundClip: 'text',
+						WebkitTextFillColor: 'transparent',
+						backgroundClip: 'text',
+						letterSpacing: '-2px'
+					}}>
+						Зв'яжіться з нами
+					</h2>
 				</div>
 
-				<div id="pricing-form" className="scale-in">
-					<h3 style={{ color: '#0057B7', marginBottom: 20, fontSize: 28, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-						<span>📄</span> Отримати прайс-лист
-					</h3>
-					<form
-						onSubmit={onSubmit}
-						style={{
-							background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
-							padding: 32,
-							borderRadius: 16,
-							boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-							border: '1px solid rgba(0,87,183,0.1)',
-						}}
-					>
-						<input name="name" required placeholder="Ваше ім'я *" style={{ width: '100%', padding: 14, marginBottom: 16, border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 15 }} />
-						<input name="phone" required type="tel" placeholder="Телефон *" style={{ width: '100%', padding: 14, marginBottom: 16, border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 15 }} />
-						<input name="email" required type="email" placeholder="Email *" style={{ width: '100%', padding: 14, marginBottom: 16, border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 15 }} />
-						<input name="company" placeholder="Назва компанії" style={{ width: '100%', padding: 14, marginBottom: 16, border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 15 }} />
-						<select name="businessType" style={{ width: '100%', padding: 14, marginBottom: 16, border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 15 }}>
-							<option value="">Оберіть тип бізнесу</option>
-							<option value="coffee-shop">Кав'ярня</option>
-							<option value="restaurant">Ресторан</option>
-							<option value="hotel">Готель</option>
-							<option value="office">Офіс</option>
-							<option value="store">Магазин</option>
-							<option value="other">Інше</option>
-						</select>
-						<textarea name="message" placeholder="Повідомлення (необов'язково)" rows={4} style={{ width: '100%', padding: 14, marginBottom: 20, border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 15, resize: 'vertical' }} />
-						<button disabled={loading} className="btn btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#0057B7', border: 0, padding: 14, borderRadius: 12, fontWeight: 700, fontSize: 16, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-							<span>{loading ? '⏳' : '📤'}</span> {loading ? 'Надсилання...' : 'Отримати прайс'}
-						</button>
-						{ok && <p style={{ color: '#0a7', marginTop: 12, fontWeight: 600 }}>✅ {ok}</p>}
-						{error && <p style={{ color: '#c00', marginTop: 12, fontWeight: 600 }}>❌ {error}</p>}
-					</form>
+				<div style={{
+					display: 'grid',
+					gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+					gap: 'clamp(24px, 4vw, 32px)'
+				}}>
+					{[
+						{ icon: '📞', title: 'Телефон', value: '+380 67 123-45-67', action: 'tel:+380671234567' },
+						{ icon: '📧', title: 'Email', value: 'info@sunleaf.ua', action: 'mailto:info@sunleaf.ua' },
+						{ icon: '📍', title: 'Адреса', value: 'вул. Київська, 75, Житомир', action: '#' },
+						{ icon: '🕐', title: 'Графік', value: 'Пн-Пт: 9:00-18:00, Сб: 10:00-15:00', action: '#' }
+					].map((contact, index) => (
+						<a
+							key={index}
+							href={contact.action}
+							className="card-hover"
+							style={{
+								background: 'white',
+								borderRadius: '24px',
+								padding: 'clamp(28px, 5vw, 36px)',
+								boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+								border: '1px solid rgba(0,0,0,0.06)',
+								textDecoration: 'none',
+								display: 'block',
+								textAlign: 'center'
+							}}
+						>
+							<div style={{
+								fontSize: 'clamp(48px, 8vw, 64px)',
+								marginBottom: '20px',
+								filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.1))'
+							}}>
+								{contact.icon}
+							</div>
+
+							<div style={{
+								fontSize: 'clamp(14px, 2.5vw, 16px)',
+								color: '#666',
+								fontWeight: '600',
+								marginBottom: '8px'
+							}}>
+								{contact.title}
+							</div>
+
+							<div style={{
+								fontSize: 'clamp(16px, 3vw, 20px)',
+								fontWeight: '800',
+								color: '#1a1a1a'
+							}}>
+								{contact.value}
+							</div>
+						</a>
+					))}
 				</div>
 			</div>
 		</section>

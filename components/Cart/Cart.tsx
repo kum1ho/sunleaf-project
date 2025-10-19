@@ -1,240 +1,580 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-// Inline функції замість імпорту
-function getCart() {
-  if (typeof window === 'undefined') return [];
-  try {
-    const cart = localStorage.getItem('sunleaf_cart');
-    return cart ? JSON.parse(cart) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCart(cart) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('sunleaf_cart', JSON.stringify(cart));
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('cartUpdated'));
-  }
-}
-
-function updateQuantity(slug, quantity) {
-  const cart = getCart();
-  const item = cart.find(i => i.slug === slug);
-  
-  if (item) {
-    item.quantity = Math.max(0, quantity);
-    saveCart(cart.filter(i => i.quantity > 0));
-  }
-}
-
-function removeFromCart(slug) {
-  const cart = getCart().filter(i => i.slug !== slug);
-  saveCart(cart);
-}
-
-function clearCart() {
-  saveCart([]);
-}
-
-function getCartTotal() {
-  return getCart().reduce((sum, item) => sum + (item.price * item.quantity), 0);
+interface CartItem {
+	id: number;
+	name: string;
+	price: number;
+	quantity: number;
+	image: string;
+	unit: string;
 }
 
 export default function Cart() {
-  const [open, setOpen] = useState(false);
-  const [cart, setCart] = useState([]);
-  const [orderForm, setOrderForm] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+	const router = useRouter();
+	const [isOpen, setIsOpen] = useState(false);
+	const [items, setItems] = useState<CartItem[]>([]);
+	const [showCheckout, setShowCheckout] = useState(false);
+	const [orderForm, setOrderForm] = useState({
+		name: '',
+		phone: '',
+		email: '',
+		address: '',
+		comment: ''
+	});
 
-  useEffect(() => {
-    setCart(getCart());
-    
-    const handleUpdate = () => setCart(getCart());
-    if (typeof window !== 'undefined') {
-      window.addEventListener('cartUpdated', handleUpdate);
-      return () => window.removeEventListener('cartUpdated', handleUpdate);
-    }
-  }, []);
+	// Load cart on mount
+	useEffect(() => {
+		loadCart();
+		
+		const handleCartUpdate = () => loadCart();
+		const handleStorageUpdate = () => loadCart();
+		
+		window.addEventListener('cartUpdated', handleCartUpdate);
+		window.addEventListener('storage', handleStorageUpdate);
+		
+		return () => {
+			window.removeEventListener('cartUpdated', handleCartUpdate);
+			window.removeEventListener('storage', handleStorageUpdate);
+		};
+	}, []);
 
-  const total = getCartTotal();
-  const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+	const loadCart = () => {
+		try {
+			const savedCart = localStorage.getItem('cart');
+			if (savedCart) {
+				const parsed = JSON.parse(savedCart);
+				setItems(Array.isArray(parsed) ? parsed : []);
+			}
+		} catch (e) {
+			console.error('Error loading cart:', e);
+			setItems([]);
+		}
+	};
 
-  const handleOrder = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    const fd = new FormData(e.currentTarget);
-    const orderData = {
-      name: String(fd.get('name') || ''),
-      phone: String(fd.get('phone') || ''),
-      email: String(fd.get('email') || ''),
-      company: String(fd.get('company') || ''),
-      cart,
-      total,
-      message: `Замовлення:\n${cart.map(item => `${item.name} x ${item.quantity} ${item.unit} = ${(item.price * item.quantity).toLocaleString()} грн`).join('\n')}\n\nВсього: ${total.toLocaleString()} грн`,
-    };
+	// Save cart whenever it changes
+	useEffect(() => {
+		if (items.length >= 0) {
+			try {
+				localStorage.setItem('cart', JSON.stringify(items));
+				window.dispatchEvent(new Event('cartUpdated'));
+			} catch (e) {
+				console.error('Error saving cart:', e);
+			}
+		}
+	}, [items]);
 
-    try {
-      const r = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
-      });
-      
-      if (r.ok) {
-        setSuccess(true);
-        clearCart();
-        setCart([]);
-        setTimeout(() => {
-          setOrderForm(false);
-          setSuccess(false);
-          setOpen(false);
-        }, 3000);
-      }
-    } catch {
-    } finally {
-      setLoading(false);
-    }
-  };
+	// Expose open function globally
+	useEffect(() => {
+		(window as any).openCart = () => setIsOpen(true);
+		return () => {
+			delete (window as any).openCart;
+		};
+	}, []);
 
-  return (
-    <>
-      {open && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 1100, padding: 20 }}>
-          <div className="scale-in" style={{ width: '100%', maxWidth: 600, background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 25px 80px rgba(0,0,0,0.4)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #0057B7 0%, #003d82 100%)', color: '#fff', padding: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', display: 'grid', placeItems: 'center', fontSize: 24 }}>🛒</div>
-                <div>
-                  <strong style={{ fontSize: 18, display: 'block' }}>Корзина</strong>
-                  <span style={{ fontSize: 12, opacity: 0.9 }}>{count} товарів на {total.toLocaleString()} грн</span>
-                </div>
-              </div>
-              <button onClick={() => setOpen(false)} style={{ background: 'transparent', color: '#fff', border: 0, fontSize: 28, cursor: 'pointer', width: 36, height: 36, borderRadius: '50%', transition: 'all 0.3s ease' }} onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>×</button>
-            </div>
+	const updateQuantity = (id: number, delta: number) => {
+		setItems(prevItems =>
+			prevItems.map(item =>
+				item.id === id
+					? { ...item, quantity: Math.max(1, item.quantity + delta) }
+					: item
+			)
+		);
+	};
 
-            {!orderForm ? (
-              <>
-                {/* Cart Items */}
-                <div style={{ flex: 1, padding: 20, overflowY: 'auto' }}>
-                  {cart.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 60, color: '#999' }}>
-                      <div style={{ fontSize: 64, marginBottom: 16 }}>🛒</div>
-                      <p>Корзина порожня</p>
-                      <button onClick={() => setOpen(false)} style={{ marginTop: 20, background: '#0057B7', color: '#fff', border: 0, padding: '12px 24px', borderRadius: 12, cursor: 'pointer' }}>До каталогу</button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gap: 16 }}>
-                      {cart.map((item) => (
-                        <div key={item.slug} style={{ display: 'grid', gridTemplateColumns: '80px 1fr auto', gap: 16, padding: 16, background: '#f8f9fa', borderRadius: 12 }}>
-                          <div style={{ width: 80, height: 80, borderRadius: 10, backgroundImage: `url('${item.image}')`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                          <div>
-                            <strong style={{ display: 'block', color: '#0057B7', marginBottom: 4 }}>{item.name}</strong>
-                            <div style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>{item.price} грн / {item.unit}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <button onClick={() => updateQuantity(item.slug, item.quantity - 1)} style={{ width: 32, height: 32, border: '2px solid #0057B7', background: '#fff', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>−</button>
-                              <input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.slug, parseInt(e.target.value) || 0)} style={{ width: 60, padding: 6, textAlign: 'center', border: '2px solid #e5e7eb', borderRadius: 8, fontWeight: 700 }} />
-                              <button onClick={() => updateQuantity(item.slug, item.quantity + 1)} style={{ width: 32, height: 32, border: '2px solid #0057B7', background: '#fff', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>+</button>
-                              <span style={{ marginLeft: 'auto', fontSize: 14, color: '#666' }}>{item.unit}</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                            <div style={{ fontWeight: 800, fontSize: 18, color: '#0057B7' }}>{(item.price * item.quantity).toLocaleString()} грн</div>
-                            <button onClick={() => removeFromCart(item.slug)} style={{ background: 'transparent', border: 0, color: '#f44336', cursor: 'pointer', fontSize: 20 }}>🗑️</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+	const removeItem = (id: number) => {
+		setItems(prevItems => prevItems.filter(item => item.id !== id));
+	};
 
-                {/* Footer */}
-                {cart.length > 0 && (
-                  <div style={{ padding: 20, borderTop: '2px solid #e5e7eb' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 20, fontWeight: 800 }}>
-                      <span>Всього:</span>
-                      <span style={{ color: '#0057B7' }}>{total.toLocaleString()} грн</span>
-                    </div>
-                    <button onClick={() => setOrderForm(true)} style={{ width: '100%', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#0057B7', border: 0, padding: 16, borderRadius: 12, fontWeight: 800, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                      <span>📋</span> Оформити замовлення
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : success ? (
-              <div style={{ padding: 60, textAlign: 'center' }}>
-                <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-                <h3 style={{ color: '#4CAF50', marginBottom: 12 }}>Дякуємо за замовлення!</h3>
-                <p style={{ color: '#666' }}>Менеджер зв'яжеться з вами найближчим часом</p>
-              </div>
-            ) : (
-              <div style={{ padding: 24, overflowY: 'auto' }}>
-                <h3 style={{ color: '#0057B7', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span>📋</span> Оформлення замовлення
-                </h3>
-                <form onSubmit={handleOrder}>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Ім'я *</label>
-                    <input name="name" required style={{ width: '100%', padding: 12, border: '2px solid #e5e7eb', borderRadius: 10 }} />
-                  </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Телефон *</label>
-                    <input name="phone" type="tel" required style={{ width: '100%', padding: 12, border: '2px solid #e5e7eb', borderRadius: 10 }} />
-                  </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Email *</label>
-                    <input name="email" type="email" required style={{ width: '100%', padding: 12, border: '2px solid #e5e7eb', borderRadius: 10 }} />
-                  </div>
-                  <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Компанія</label>
-                    <input name="company" style={{ width: '100%', padding: 12, border: '2px solid #e5e7eb', borderRadius: 10 }} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button type="button" onClick={() => setOrderForm(false)} style={{ flex: 1, padding: 12, border: '2px solid #e5e7eb', borderRadius: 10, background: '#fff', cursor: 'pointer' }}>Назад</button>
-                    <button disabled={loading} type="submit" style={{ flex: 2, background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#0057B7', border: 0, padding: 12, borderRadius: 10, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
-                      {loading ? '⏳ Надсилання...' : '📤 Підтвердити'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+	const clearCart = () => {
+		if (confirm('Очистити кошик?')) {
+			setItems([]);
+			localStorage.removeItem('cart');
+		}
+	};
 
-      {/* Floating Button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="pulse-glow bounce-on-hover"
-        style={{
-          position: 'fixed',
-          right: 'clamp(10px, 2vw, 20px)',
-          top: 'clamp(80px, 15vh, 120px)',
-          background: 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)',
-          color: '#fff',
-          border: 0,
-          borderRadius: '50%',
-          width: 64,
-          height: 64,
-          boxShadow: '0 12px 40px rgba(76,175,80,0.5)',
-          display: 'grid',
-          placeItems: 'center',
-          zIndex: 998,
-          fontSize: 28,
-          cursor: 'pointer',
-        }}
-      >
-        🛒
-        {count > 0 && (
-          <div style={{ position: 'absolute', top: -4, right: -4, width: 28, height: 28, borderRadius: '50%', background: '#f44336', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 800, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-            {count}
-          </div>
-        )}
-      </button>
-    </>
-  );
+	const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+	const handleCheckout = (e: React.FormEvent) => {
+		e.preventDefault();
+		
+		const orderData = {
+			items,
+			total,
+			customer: orderForm,
+			orderNumber: Math.floor(100000 + Math.random() * 900000),
+			date: new Date().toLocaleString('uk-UA')
+		};
+
+		console.log('Order submitted:', orderData);
+		alert(`✅ Замовлення #${orderData.orderNumber} успішно оформлено!\n\nСума: ${total.toLocaleString()}₴\n\nНаш менеджер зв'яжеться з вами протягом 15 хвилин.\nДякуємо за покупку! 🎉`);
+
+		setItems([]);
+		localStorage.removeItem('cart');
+		setShowCheckout(false);
+		setIsOpen(false);
+		setOrderForm({ name: '', phone: '', email: '', address: '', comment: '' });
+	};
+
+	if (!isOpen) return null;
+
+	return (
+		<>
+			<div style={{
+				position: 'fixed',
+				inset: 0,
+				background: 'rgba(0,0,0,0.7)',
+				backdropFilter: 'blur(8px)',
+				zIndex: 10000,
+				animation: 'fadeIn 0.3s ease'
+			}} onClick={() => { setIsOpen(false); setShowCheckout(false); }} />
+
+			<div style={{
+				position: 'fixed',
+				top: 0,
+				right: 0,
+				bottom: 0,
+				width: 'min(500px, 100vw)',
+				background: 'white',
+				boxShadow: '-8px 0 32px rgba(0,0,0,0.2)',
+				display: 'flex',
+				flexDirection: 'column',
+				animation: 'slideInRight 0.3s ease',
+				zIndex: 10001
+			}} onClick={(e) => e.stopPropagation()}>
+				
+				{/* Header */}
+				<div style={{
+					padding: 'clamp(20px, 4vw, 24px)',
+					borderBottom: '1px solid #e0e0e0',
+					display: 'flex',
+					justifyContent: 'space-between',
+					alignItems: 'center',
+					background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+					color: 'white'
+				}}>
+					<div>
+						<h2 style={{ margin: '0 0 4px', fontSize: 'clamp(22px, 4vw, 26px)', fontWeight: '900' }}>
+							🛒 Кошик
+						</h2>
+						<p style={{ margin: 0, fontSize: 'clamp(13px, 2vw, 14px)', opacity: 0.9 }}>
+							{items.length} {items.length === 1 ? 'товар' : items.length < 5 ? 'товари' : 'товарів'}
+						</p>
+					</div>
+					<button onClick={() => { setIsOpen(false); setShowCheckout(false); }} style={{
+						width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)',
+						border: 'none', color: 'white', fontSize: '22px', cursor: 'pointer',
+						display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s ease'
+					}}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+						e.currentTarget.style.transform = 'rotate(90deg) scale(1.1)';
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+						e.currentTarget.style.transform = 'rotate(0) scale(1)';
+					}}
+					>✕</button>
+				</div>
+
+				{!showCheckout ? (
+					<>
+						<div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px, 3vw, 20px)' }}>
+							{items.length === 0 ? (
+								<div style={{ textAlign: 'center', padding: 'clamp(50px, 10vw, 80px) 20px', color: '#666' }}>
+									<div style={{ fontSize: 'clamp(70px, 15vw, 100px)', marginBottom: '24px', opacity: 0.4 }}>🛒</div>
+									<h3 style={{ margin: '0 0 12px', fontSize: 'clamp(20px, 4vw, 24px)', fontWeight: '800', color: '#1a1a1a' }}>
+										Кошик порожній
+									</h3>
+									<p style={{ margin: '0 0 24px', fontSize: 'clamp(15px, 3vw, 16px)', lineHeight: 1.6 }}>
+										Додайте товари з каталогу
+									</p>
+									<button onClick={() => { setIsOpen(false); router.push('/#catalog'); }} style={{
+										padding: '14px 28px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+										color: 'white', border: 'none', borderRadius: '14px', fontSize: '16px',
+										fontWeight: '800', cursor: 'pointer', transition: 'all 0.3s ease',
+										boxShadow: '0 8px 24px rgba(102,126,234,0.3)'
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.transform = 'translateY(-2px)';
+										e.currentTarget.style.boxShadow = '0 12px 32px rgba(102,126,234,0.4)';
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.transform = 'translateY(0)';
+										e.currentTarget.style.boxShadow = '0 8px 24px rgba(102,126,234,0.3)';
+									}}
+									>📦 До каталогу</button>
+								</div>
+							) : (
+								<div style={{ display: 'grid', gap: '16px' }}>
+									{items.map(item => (
+										<div key={item.id} style={{
+											background: '#f8f9fa', borderRadius: '16px', padding: 'clamp(14px, 3vw, 16px)',
+											display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '16px',
+											alignItems: 'center', transition: 'all 0.3s ease', border: '2px solid transparent'
+										}}
+										onMouseEnter={(e) => e.currentTarget.style.borderColor = '#667eea'}
+										onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+										>
+											<div style={{
+												width: 'clamp(70px, 15vw, 80px)', height: 'clamp(70px, 15vw, 80px)',
+												borderRadius: '14px', background: 'linear-gradient(135deg, #6F4E37 0%, #3E2723 100%)',
+												display: 'flex', alignItems: 'center', justifyContent: 'center',
+												fontSize: 'clamp(32px, 7vw, 40px)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+											}}>{item.image}</div>
+
+											<div>
+												<h4 style={{
+													margin: '0 0 6px', fontSize: 'clamp(15px, 3vw, 17px)',
+													fontWeight: '800', color: '#1a1a1a', lineHeight: 1.3
+												}}>{item.name}</h4>
+												<div style={{
+													fontSize: 'clamp(18px, 3.5vw, 20px)', fontWeight: '900',
+													color: '#28a745', marginBottom: '12px'
+												}}>{item.price} ₴/{item.unit}</div>
+
+												<div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+													<button onClick={() => updateQuantity(item.id, -1)} style={{
+														width: '36px', height: '36px', borderRadius: '10px', background: 'white',
+														border: '2px solid #e0e0e0', color: '#1a1a1a', fontSize: '18px',
+														fontWeight: '800', cursor: 'pointer', display: 'flex',
+														alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s ease'
+													}}
+													onMouseEnter={(e) => {
+														e.currentTarget.style.borderColor = '#667eea';
+														e.currentTarget.style.color = '#667eea';
+														e.currentTarget.style.transform = 'scale(1.1)';
+													}}
+													onMouseLeave={(e) => {
+														e.currentTarget.style.borderColor = '#e0e0e0';
+														e.currentTarget.style.color = '#1a1a1a';
+														e.currentTarget.style.transform = 'scale(1)';
+													}}
+													>−</button>
+													<span style={{
+														minWidth: '40px', textAlign: 'center',
+														fontSize: 'clamp(16px, 3vw, 18px)', fontWeight: '800'
+													}}>{item.quantity}</span>
+													<button onClick={() => updateQuantity(item.id, 1)} style={{
+														width: '36px', height: '36px', borderRadius: '10px', background: 'white',
+														border: '2px solid #e0e0e0', color: '#1a1a1a', fontSize: '18px',
+														fontWeight: '800', cursor: 'pointer', display: 'flex',
+														alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s ease'
+													}}
+													onMouseEnter={(e) => {
+														e.currentTarget.style.borderColor = '#667eea';
+														e.currentTarget.style.color = '#667eea';
+														e.currentTarget.style.transform = 'scale(1.1)';
+													}}
+													onMouseLeave={(e) => {
+														e.currentTarget.style.borderColor = '#e0e0e0';
+														e.currentTarget.style.color = '#1a1a1a';
+														e.currentTarget.style.transform = 'scale(1)';
+													}}
+													>+</button>
+												</div>
+											</div>
+
+											<button onClick={() => removeItem(item.id)} style={{
+												width: '40px', height: '40px', borderRadius: '50%', background: '#fee',
+												border: 'none', color: '#dc3545', fontSize: '20px', cursor: 'pointer',
+												display: 'flex', alignItems: 'center', justifyContent: 'center',
+												transition: 'all 0.3s ease', alignSelf: 'flex-start'
+											}}
+											onMouseEnter={(e) => {
+												e.currentTarget.style.background = '#dc3545';
+												e.currentTarget.style.color = 'white';
+												e.currentTarget.style.transform = 'scale(1.15) rotate(10deg)';
+											}}
+											onMouseLeave={(e) => {
+												e.currentTarget.style.background = '#fee';
+												e.currentTarget.style.color = '#dc3545';
+												e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+											}}
+											>🗑</button>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+
+						{items.length > 0 && (
+							<div style={{
+								padding: 'clamp(20px, 4vw, 24px)',
+								borderTop: '1px solid #e0e0e0',
+								background: 'white'
+							}}>
+								<div style={{
+									display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+									marginBottom: '20px', padding: '20px',
+									background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+									borderRadius: '16px'
+								}}>
+									<span style={{ fontSize: 'clamp(18px, 3.5vw, 20px)', fontWeight: '800', color: '#666' }}>
+										Разом:
+									</span>
+									<span style={{ fontSize: 'clamp(28px, 6vw, 36px)', fontWeight: '900', color: '#28a745' }}>
+										{total.toLocaleString()} ₴
+									</span>
+								</div>
+
+								<button onClick={() => setShowCheckout(true)} style={{
+									width: '100%', padding: 'clamp(16px, 3vw, 18px)',
+									background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+									color: 'white', border: 'none', borderRadius: '14px',
+									fontSize: 'clamp(17px, 3.5vw, 19px)', fontWeight: '800', cursor: 'pointer',
+									transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+									boxShadow: '0 8px 24px rgba(40,167,69,0.3)', display: 'flex',
+									alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '12px'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.transform = 'translateY(-3px)';
+									e.currentTarget.style.boxShadow = '0 12px 32px rgba(40,167,69,0.4)';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.transform = 'translateY(0)';
+									e.currentTarget.style.boxShadow = '0 8px 24px rgba(40,167,69,0.3)';
+								}}
+								>
+									<span style={{ fontSize: 'clamp(22px, 4vw, 24px)' }}>✓</span>
+									Оформити замовлення
+								</button>
+
+								<button onClick={clearCart} style={{
+									width: '100%', padding: '12px', background: 'white', color: '#dc3545',
+									border: '2px solid #dc3545', borderRadius: '12px',
+									fontSize: 'clamp(14px, 2.5vw, 15px)', fontWeight: '700',
+									cursor: 'pointer', transition: 'all 0.3s ease'
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = '#dc3545';
+									e.currentTarget.style.color = 'white';
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = 'white';
+									e.currentTarget.style.color = '#dc3545';
+								}}
+								>🗑 Очистити кошик</button>
+							</div>
+						)}
+					</>
+				) : (
+					<div style={{ flex: 1, overflowY: 'auto', padding: 'clamp(20px, 4vw, 32px)' }}>
+						<button onClick={() => setShowCheckout(false)} style={{
+							display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px',
+							padding: '10px 16px', background: '#f8f9fa', border: 'none',
+							borderRadius: '10px', color: '#667eea', fontSize: '15px', fontWeight: '700',
+							cursor: 'pointer', transition: 'all 0.3s ease'
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = '#667eea';
+							e.currentTarget.style.color = 'white';
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = '#f8f9fa';
+							e.currentTarget.style.color = '#667eea';
+						}}
+						>← Назад до кошика</button>
+
+						<h3 style={{
+							margin: '0 0 24px', fontSize: 'clamp(22px, 4vw, 26px)',
+							fontWeight: '900', color: '#1a1a1a'
+						}}>📝 Оформлення замовлення</h3>
+
+						<form onSubmit={handleCheckout} style={{ display: 'grid', gap: '20px' }}>
+							<div>
+								<label style={{
+									display: 'block', marginBottom: '8px',
+									fontSize: 'clamp(14px, 2.5vw, 15px)', fontWeight: '700', color: '#1a1a1a'
+								}}>Ім'я *</label>
+								<input type="text" required value={orderForm.name}
+									onChange={(e) => setOrderForm({...orderForm, name: e.target.value})}
+									placeholder="Введіть ваше ім'я" style={{
+										width: '100%', padding: 'clamp(12px, 2vw, 16px)',
+										border: '2px solid #e0e0e0', borderRadius: '12px',
+										fontSize: 'clamp(15px, 3vw, 16px)', outline: 'none',
+										transition: 'all 0.3s ease'
+									}}
+									onFocus={(e) => {
+										e.currentTarget.style.borderColor = '#667eea';
+										e.currentTarget.style.boxShadow = '0 0 0 4px rgba(102,126,234,0.1)';
+									}}
+									onBlur={(e) => {
+										e.currentTarget.style.borderColor = '#e0e0e0';
+										e.currentTarget.style.boxShadow = 'none';
+									}}
+								/>
+							</div>
+
+							<div>
+								<label style={{
+									display: 'block', marginBottom: '8px',
+									fontSize: 'clamp(14px, 2.5vw, 15px)', fontWeight: '700', color: '#1a1a1a'
+								}}>Телефон *</label>
+								<input type="tel" required value={orderForm.phone}
+									onChange={(e) => setOrderForm({...orderForm, phone: e.target.value})}
+									placeholder="+380 XX XXX XX XX" style={{
+										width: '100%', padding: 'clamp(12px, 2vw, 16px)',
+										border: '2px solid #e0e0e0', borderRadius: '12px',
+										fontSize: 'clamp(15px, 3vw, 16px)', outline: 'none',
+										transition: 'all 0.3s ease'
+									}}
+									onFocus={(e) => {
+										e.currentTarget.style.borderColor = '#667eea';
+										e.currentTarget.style.boxShadow = '0 0 0 4px rgba(102,126,234,0.1)';
+									}}
+									onBlur={(e) => {
+										e.currentTarget.style.borderColor = '#e0e0e0';
+										e.currentTarget.style.boxShadow = 'none';
+									}}
+								/>
+							</div>
+
+							<div>
+								<label style={{
+									display: 'block', marginBottom: '8px',
+									fontSize: 'clamp(14px, 2.5vw, 15px)', fontWeight: '700', color: '#1a1a1a'
+								}}>Email</label>
+								<input type="email" value={orderForm.email}
+									onChange={(e) => setOrderForm({...orderForm, email: e.target.value})}
+									placeholder="your@email.com" style={{
+										width: '100%', padding: 'clamp(12px, 2vw, 16px)',
+										border: '2px solid #e0e0e0', borderRadius: '12px',
+										fontSize: 'clamp(15px, 3vw, 16px)', outline: 'none',
+										transition: 'all 0.3s ease'
+									}}
+									onFocus={(e) => {
+										e.currentTarget.style.borderColor = '#667eea';
+										e.currentTarget.style.boxShadow = '0 0 0 4px rgba(102,126,234,0.1)';
+									}}
+									onBlur={(e) => {
+										e.currentTarget.style.borderColor = '#e0e0e0';
+										e.currentTarget.style.boxShadow = 'none';
+									}}
+								/>
+							</div>
+
+							<div>
+								<label style={{
+									display: 'block', marginBottom: '8px',
+									fontSize: 'clamp(14px, 2.5vw, 15px)', fontWeight: '700', color: '#1a1a1a'
+								}}>Адреса доставки *</label>
+								<input type="text" required value={orderForm.address}
+									onChange={(e) => setOrderForm({...orderForm, address: e.target.value})}
+									placeholder="Місто, вулиця, будинок" style={{
+										width: '100%', padding: 'clamp(12px, 2vw, 16px)',
+										border: '2px solid #e0e0e0', borderRadius: '12px',
+										fontSize: 'clamp(15px, 3vw, 16px)', outline: 'none',
+										transition: 'all 0.3s ease'
+									}}
+									onFocus={(e) => {
+										e.currentTarget.style.borderColor = '#667eea';
+										e.currentTarget.style.boxShadow = '0 0 0 4px rgba(102,126,234,0.1)';
+									}}
+									onBlur={(e) => {
+										e.currentTarget.style.borderColor = '#e0e0e0';
+										e.currentTarget.style.boxShadow = 'none';
+									}}
+								/>
+							</div>
+
+							<div>
+								<label style={{
+									display: 'block', marginBottom: '8px',
+									fontSize: 'clamp(14px, 2.5vw, 15px)', fontWeight: '700', color: '#1a1a1a'
+								}}>Коментар до замовлення</label>
+								<textarea value={orderForm.comment}
+									onChange={(e) => setOrderForm({...orderForm, comment: e.target.value})}
+									placeholder="Додаткова інформація..." rows={4} style={{
+										width: '100%', padding: 'clamp(12px, 2vw, 16px)',
+										border: '2px solid #e0e0e0', borderRadius: '12px',
+										fontSize: 'clamp(15px, 3vw, 16px)', outline: 'none',
+										resize: 'vertical', fontFamily: 'inherit', transition: 'all 0.3s ease'
+									}}
+									onFocus={(e) => {
+										e.currentTarget.style.borderColor = '#667eea';
+										e.currentTarget.style.boxShadow = '0 0 0 4px rgba(102,126,234,0.1)';
+									}}
+									onBlur={(e) => {
+										e.currentTarget.style.borderColor = '#e0e0e0';
+										e.currentTarget.style.boxShadow = 'none';
+									}}
+								/>
+							</div>
+
+							<div style={{
+								padding: '20px', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+								borderRadius: '16px', border: '2px solid #e0e0e0'
+							}}>
+								<h4 style={{
+									margin: '0 0 16px', fontSize: 'clamp(16px, 3vw, 18px)',
+									fontWeight: '800', color: '#1a1a1a'
+								}}>📦 Ваше замовлення</h4>
+								<div style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
+									{items.map(item => (
+										<div key={item.id} style={{
+											display: 'flex', justifyContent: 'space-between',
+											fontSize: 'clamp(14px, 2.5vw, 15px)', color: '#666'
+										}}>
+											<span>{item.name} × {item.quantity}</span>
+											<span style={{ fontWeight: '700', color: '#28a745' }}>
+												{(item.price * item.quantity).toLocaleString()} ₴
+											</span>
+										</div>
+									))}
+								</div>
+								<div style={{
+									paddingTop: '16px', borderTop: '2px solid #e0e0e0',
+									display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+								}}>
+									<span style={{
+										fontSize: 'clamp(18px, 3.5vw, 20px)',
+										fontWeight: '800', color: '#1a1a1a'
+									}}>Всього:</span>
+									<span style={{
+										fontSize: 'clamp(26px, 5vw, 32px)',
+										fontWeight: '900', color: '#28a745'
+									}}>{total.toLocaleString()} ₴</span>
+								</div>
+							</div>
+
+							<button type="submit" style={{
+								width: '100%', padding: 'clamp(16px, 3vw, 18px)',
+								background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+								color: 'white', border: 'none', borderRadius: '14px',
+								fontSize: 'clamp(17px, 3.5vw, 19px)', fontWeight: '800',
+								cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+								boxShadow: '0 8px 24px rgba(40,167,69,0.3)', display: 'flex',
+								alignItems: 'center', justifyContent: 'center', gap: '10px'
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.transform = 'translateY(-3px)';
+								e.currentTarget.style.boxShadow = '0 12px 32px rgba(40,167,69,0.4)';
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.transform = 'translateY(0)';
+								e.currentTarget.style.boxShadow = '0 8px 24px rgba(40,167,69,0.3)';
+							}}
+							>
+								<span style={{ fontSize: 'clamp(22px, 4vw, 24px)' }}>✓</span>
+								Підтвердити замовлення
+							</button>
+						</form>
+					</div>
+				)}
+			</div>
+
+			<style jsx global>{`
+				@keyframes fadeIn {
+					from { opacity: 0; }
+					to { opacity: 1; }
+				}
+
+				@keyframes slideInRight {
+					from { opacity: 0; transform: translateX(100%); }
+					to { opacity: 1; transform: translateX(0); }
+				}
+			`}</style>
+		</>
+	);
 }

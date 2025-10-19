@@ -85,7 +85,6 @@ function parseFeatures(featuresStr) {
 // Обробка CSV
 function parseCSV(csvData) {
   const lines = csvData.trim().split('\n');
-  const headers = lines[0].split(';');
   const products = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -113,7 +112,12 @@ function parseCSV(csvData) {
       image: `/images/${transliterate(name)}.jpg`,
       country,
       features: parseFeatures(features),
-      specs: parseSpecs(specs)
+      specs: parseSpecs(specs),
+      stock: 100,
+      unit: 'кг',
+      status: 'В наявності',
+      sku: `IMPORT-${Date.now()}-${i}`,
+      supplier: 'Імпорт 1C'
     };
 
     products.push(product);
@@ -122,49 +126,43 @@ function parseCSV(csvData) {
   return products;
 }
 
-export default async function handler(req, res) {
+export default function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const token = getToken(req);
-  
   try {
-    jwt.verify(token, JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: 'Не авторизовано' });
-  }
+    const { csvData } = req.body || {};
 
-  try {
-    const { fileContent, format = 'csv' } = req.body;
-    
-    if (!fileContent) {
-      return res.status(400).json({ error: 'Файл не надано' });
+    if (!csvData || !csvData.trim()) {
+      return res.status(400).json({ error: 'CSV дані обов\'язкові' });
     }
 
-    console.log('[1C Import] Parsing file...');
-    const products = parse1C(fileContent, format);
-    console.log('[1C Import] Parsed products:', products.length);
-
-    // Зберігаємо у файл (або БД)
-    const outputPath = path.join(process.cwd(), 'lib', 'products-data-imported.js');
+    const lines = csvData.trim().split('\n');
     
-    const fileData = `// Auto-generated from 1C import
-const IMPORTED_PRODUCTS = ${JSON.stringify(products, null, 2)};
+    if (lines.length < 2) {
+      return res.status(400).json({ error: 'CSV має містити хоча б один рядок даних' });
+    }
 
-module.exports = { IMPORTED_PRODUCTS };
-`;
-    
-    fs.writeFileSync(outputPath, fileData, 'utf8');
-    console.log('[1C Import] Saved to:', outputPath);
+    // Використовуємо розширену функцію parseCSV
+    const products = parseCSV(csvData);
 
-    return res.status(200).json({ 
-      success: true, 
-      productsCount: products.length,
-      message: `Імпортовано ${products.length} товарів. Перезапустіть сервер для застосування змін.`
+    if (products.length === 0) {
+      return res.status(400).json({ error: 'Не знайдено валідних товарів у CSV' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: products.length,
+      products: products,
+      message: `Успішно оброблено ${products.length} товарів`
     });
+
   } catch (error) {
-    console.error('[1C Import] Error:', error);
-    return res.status(500).json({ error: 'Помилка імпорту', details: error.message });
+    console.error('[Import 1C] Error:', error);
+    return res.status(500).json({ 
+      error: 'Помилка обробки CSV даних',
+      details: error.message 
+    });
   }
 }

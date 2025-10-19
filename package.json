@@ -15,16 +15,16 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "eslint": "^8.50.0",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "eslint": "^8.56.0",
     "eslint-config-next": "14.0.0",
-    "typescript": "^5.2.0"
+    "typescript": "^5.3.3"
   },
   "keywords": [
     "ukraine",
-    "zhytomyr", 
+    "zhytomyr",
     "coffee",
     "tea",
     "wholesale",

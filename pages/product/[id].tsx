@@ -1,6 +1,7 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
 import { useState } from 'react';
+import Link from 'next/link';
 import Header from '../../components/Header/Header';
 import Footer from '../../components/Footer/Footer';
 import { getProductBySlug, getAllProducts, getProductsByCategory } from '../../lib/products-data';
@@ -204,6 +205,35 @@ export default function ProductPage({ product, relatedProducts }: Props) {
               </div>
             </div>
           )}
+
+          {/* Кнопки навігації */}
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginTop: 40 }}>
+            <Link href="/" style={{
+              display: 'inline-block',
+              padding: '14px 28px',
+              background: 'linear-gradient(135deg, #0057B7 0%, #003d82 100%)',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '12px',
+              fontWeight: '600',
+              transition: 'transform 0.3s ease'
+            }}>
+              🏠 На головну
+            </Link>
+
+            <Link href="/product" style={{
+              display: 'inline-block',
+              padding: '14px 28px',
+              background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+              color: '#0057B7',
+              textDecoration: 'none',
+              borderRadius: '12px',
+              fontWeight: '600',
+              transition: 'transform 0.3s ease'
+            }}>
+              ☕ Каталог
+            </Link>
+          </div>
         </div>
       </main>
 

@@ -4,11 +4,20 @@ import Logo from '../Logo/Logo';
 export default function Header() {
 	const [scrolled, setScrolled] = useState(false);
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
 
 	useEffect(() => {
 		const onScroll = () => setScrolled(window.scrollY > 20);
+		const onResize = () => setIsMobile(window.innerWidth <= 768);
+		
+		onResize(); // Initial check
 		window.addEventListener('scroll', onScroll);
-		return () => window.removeEventListener('scroll', onScroll);
+		window.addEventListener('resize', onResize);
+		
+		return () => {
+			window.removeEventListener('scroll', onScroll);
+			window.removeEventListener('resize', onResize);
+		};
 	}, []);
 
 	const links = [
@@ -25,7 +34,6 @@ export default function Header() {
 	return (
 		<>
 			<header
-				className="header-sticky"
 				style={{
 					position: 'sticky',
 					top: 0,
@@ -40,14 +48,21 @@ export default function Header() {
 				<div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: scrolled ? '8px 20px' : '14px 20px', transition: 'padding 0.3s ease' }}>
 					{/* Logo */}
 					<div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-						<Logo size={scrolled ? 38 : 44} className="float" />
-						<strong className="gradient-text" style={{ fontSize: scrolled ? 18 : 20, transition: 'font-size 0.3s ease', background: 'linear-gradient(135deg, #0057B7 0%, #FFD700 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+						<Logo size={scrolled ? 38 : 44} />
+						<strong style={{ 
+							fontSize: scrolled ? 18 : 20, 
+							transition: 'font-size 0.3s ease', 
+							background: 'linear-gradient(135deg, #0057B7 0%, #FFD700 100%)', 
+							WebkitBackgroundClip: 'text', 
+							backgroundClip: 'text', 
+							WebkitTextFillColor: 'transparent' 
+						}}>
 							Sunleaf
 						</strong>
 					</div>
 
 					{/* Desktop Navigation */}
-					<nav className="desktop-nav">
+					<nav style={{ display: isMobile ? 'none' : 'block' }}>
 						<ul style={{ display: 'flex', gap: 20, listStyle: 'none', margin: 0, padding: 0 }}>
 							{links.map((link, i) => (
 								<li key={i}>
@@ -70,12 +85,30 @@ export default function Header() {
 					</nav>
 
 					{/* Phone (Desktop) */}
-					<a href="tel:+380671234567" className="desktop-phone" style={{ color: '#0057B7', fontWeight: 700, fontSize: 16, textDecoration: 'none' }}>
+					<a 
+						href="tel:+380671234567" 
+						style={{ 
+							color: '#0057B7', 
+							fontWeight: 700, 
+							fontSize: 16, 
+							textDecoration: 'none',
+							display: isMobile ? 'none' : 'block'
+						}}
+					>
 						+380 67 123 45 67
 					</a>
 
 					{/* Burger Menu */}
-					<div className={`burger ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
+					<div 
+						onClick={() => setMenuOpen(!menuOpen)}
+						style={{
+							display: isMobile ? 'flex' : 'none',
+							flexDirection: 'column',
+							gap: 5,
+							cursor: 'pointer',
+							zIndex: 100
+						}}
+					>
 						<span style={{ width: 28, height: 3, background: '#0057B7', borderRadius: 2, transition: 'all 0.3s ease', transform: menuOpen ? 'rotate(45deg) translateY(8px)' : 'none' }}></span>
 						<span style={{ width: 28, height: 3, background: '#0057B7', borderRadius: 2, transition: 'all 0.3s ease', opacity: menuOpen ? 0 : 1 }}></span>
 						<span style={{ width: 28, height: 3, background: '#0057B7', borderRadius: 2, transition: 'all 0.3s ease', transform: menuOpen ? 'rotate(-45deg) translateY(-8px)' : 'none' }}></span>
@@ -84,7 +117,22 @@ export default function Header() {
 			</header>
 
 			{/* Mobile Menu */}
-			<div className={`mobile-menu ${menuOpen ? 'open' : ''}`} style={{ position: 'fixed', top: 0, right: menuOpen ? 0 : '-100%', width: '80%', maxWidth: 320, height: '100vh', background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)', boxShadow: '-4px 0 20px rgba(0,0,0,0.15)', padding: '80px 24px 24px', transition: 'right 0.4s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 99, overflowY: 'auto' }}>
+			<div 
+				style={{ 
+					position: 'fixed', 
+					top: 0, 
+					right: menuOpen ? 0 : '-100%', 
+					width: '80%', 
+					maxWidth: 320, 
+					height: '100vh', 
+					background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)', 
+					boxShadow: '-4px 0 20px rgba(0,0,0,0.15)', 
+					padding: '80px 24px 24px', 
+					transition: 'right 0.4s cubic-bezier(0.4, 0, 0.2, 1)', 
+					zIndex: 99, 
+					overflowY: 'auto' 
+				}}
+			>
 				<ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
 					{links.map((link, i) => (
 						<li key={i} style={{ marginBottom: 20 }}>
@@ -123,16 +171,19 @@ export default function Header() {
 			</div>
 
 			{/* Overlay */}
-			<div className={`mobile-overlay ${menuOpen ? 'open' : ''}`} onClick={closeMenu} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', opacity: menuOpen ? 1 : 0, pointerEvents: menuOpen ? 'auto' : 'none', transition: 'opacity 0.3s ease', zIndex: 98 }}></div>
-
-			<style jsx>{`
-				.burger { display: none; flex-direction: column; gap: 5px; cursor: pointer; z-index: 100; }
-				.desktop-nav, .desktop-phone { display: block; }
-				@media (max-width: 768px) {
-					.burger { display: flex; }
-					.desktop-nav, .desktop-phone { display: none !important; }
-				}
-			`}</style>
+			<div 
+				onClick={closeMenu} 
+				style={{ 
+					position: 'fixed', 
+					inset: 0, 
+					background: 'rgba(0,0,0,0.5)', 
+					backdropFilter: 'blur(4px)', 
+					opacity: menuOpen ? 1 : 0, 
+					pointerEvents: menuOpen ? 'auto' : 'none', 
+					transition: 'opacity 0.3s ease', 
+					zIndex: 98 
+				}}
+			/>
 		</>
 	);
 }

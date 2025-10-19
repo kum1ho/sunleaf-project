@@ -122,10 +122,9 @@ function parseCSV(csvData) {
   return products;
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const token = getToken(req);
@@ -168,4 +167,4 @@ module.exports = { IMPORTED_PRODUCTS };
     console.error('[1C Import] Error:', error);
     return res.status(500).json({ error: 'Помилка імпорту', details: error.message });
   }
-};
+}

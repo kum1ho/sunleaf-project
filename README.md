@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 # 🍃 Sunleaf - Оптові поставки преміум кави та чаю
 
 ![Sunleaf Banner](https://via.placeholder.com/1200x300/0057B7/FFD700?text=Sunleaf+Ukraine)
